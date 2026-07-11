@@ -1,0 +1,25 @@
+Project Phoenix Meeting
+
+Date: July 5, 2026
+
+Attendees:
+Parag
+Rahul
+Sneha
+
+Discussion:
+
+Parag:
+We need to finish the login module by Friday.
+
+Rahul:
+Database migration will start tomorrow.
+
+Sneha:
+Testing will begin next Monday.
+
+Action Items:
+
+- Parag will complete the login module.
+- Rahul will migrate the database.
+- Sneha will prepare the test cases.
