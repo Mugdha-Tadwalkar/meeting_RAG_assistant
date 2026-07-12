@@ -1,59 +1,121 @@
-# Import TextLoader from LangChain.
-# TextLoader reads a text file and converts it into a LangChain Document.
-from langchain_community.document_loaders import TextLoader
+# -------------------------------
+# Imports
+# -------------------------------
+import warnings
 
-# Import RecursiveCharacterTextSplitter.
-# This is LangChain's most commonly used text splitter.
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-
-#Required libraries for environment var
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 from dotenv import load_dotenv
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-import os
-#loading env var from dotenv
-load_dotenv()
-print(os.getenv("GOOGLE_API_KEY"))
-#Step 1 : Document loading 
-# Create a loader object and tell it which file to read.
-loader = TextLoader("meeting.txt")
 
-# Read the file.
-# The result is a list of Document objects.
+from langchain_community.document_loaders import TextLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import Chroma
+
+# Gemini Embeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
+# Groq LLM
+from langchain_groq import ChatGroq
+
+# -------------------------------
+# Load Environment Variables
+# -------------------------------
+load_dotenv()
+
+# -------------------------------
+# Step 1 : Document Loading
+# -------------------------------
+loader = TextLoader("meeting.txt")
 documents = loader.load()
 
-#Step 2 : Chunking
+# -------------------------------
+# Step 2 : Chunking
+# -------------------------------
 splitter = RecursiveCharacterTextSplitter(
-    chunk_size=100,      # Maximum characters in one chunk
-    chunk_overlap=20     # 20 characters overlap between chunks
+    chunk_size=300,
+    chunk_overlap=50
 )
-# Split the document into chunks.
+
 chunks = splitter.split_documents(documents)
 
-# Print the number of chunks created.
-#print(f"Total Chunks: {len(chunks)}")
-
-#enumerate gives you both index and a value. Basically it lets you loop through a list while keeping the track of index.
-# Print every chunk.
-# for i, chunk in enumerate(chunks):
-#     print("=" * 40)
-#     print(f"Chunk {i+1}")
-#     print("=" * 40)
-#     print(chunk.page_content)
-    
-#page_content is an attribute (property) of a LangChain Document object that stores the actual text of the document or chunk.
-#chunk_size is the maximum size of a chunk, not the exact size. RecursiveCharacterTextSplitter tries to keep meaningful text together and only splits when necessary, while chunk_overlap repeats a small part of the previous chunk to preserve context.
-
-# Step 5 : Creating the embedding model
-
+# -------------------------------
+# Step 3 : Embedding Model
+# -------------------------------
 embeddings = GoogleGenerativeAIEmbeddings(
     model="gemini-embedding-001"
 )
 
-# Step 6 : Converting the chunks into embedding
+# -------------------------------
+# Step 4 : Create Chroma DB
+# -------------------------------
+vector_store = Chroma.from_documents(
+    documents=chunks,
+    embedding=embeddings
+)
 
-vector = embeddings.embed_query(chunks[0].page_content)
-print("1st chunk")
-print(chunks[0].page_content)
-print(len(vector))
-print(vector[:10])
-    
+
+# -------------------------------
+# Step 5 : Groq LLM
+# -------------------------------
+llm = ChatGroq(
+    model="llama-3.3-70b-versatile",
+    temperature=0
+)
+
+# -------------------------------
+# Step 6 : Chat Loop
+# -------------------------------
+while True:
+
+    query = input("\nAsk me a question (type 'exit' to quit): ")
+
+    if query.lower() == "exit":
+        print("👋 Thanks for using Meeting Assistant!")
+        break
+
+    # Retrieve relevant chunks
+    results = vector_store.similarity_search(
+        query=query,
+        k=3
+    )
+
+    if not results:
+        print("No relevant information found.")
+        continue
+
+    context = ""
+
+
+    for doc in results:
+
+
+        context += doc.page_content + "\n\n"
+
+ 
+
+    prompt = f"""
+You are an AI Meeting Assistant.
+
+Answer ONLY using the meeting notes provided below.
+
+Rules:
+- Use only the meeting notes.
+- If the answer is available, answer clearly.
+- If the answer is NOT available, reply exactly:
+Sorry, I can only answer questions related to this meeting.
+- Do not make up information.
+
+Meeting Notes:
+{context}
+
+Question:
+{query}
+
+Answer:
+"""
+
+    response = llm.invoke(prompt)
+
+    print("\n==============================")
+    print("AI Answer")
+    print("==============================")
+    print(response.content)

@@ -5,7 +5,7 @@ Date: July 5, 2026
 Attendees:
 Parag
 Rahul
-Sneha
+Mugdha
 
 Discussion:
 
@@ -15,11 +15,11 @@ We need to finish the login module by Friday.
 Rahul:
 Database migration will start tomorrow.
 
-Sneha:
+Mugdha:
 Testing will begin next Monday.
 
 Action Items:
 
 - Parag will complete the login module.
 - Rahul will migrate the database.
-- Sneha will prepare the test cases.
+- Mugdha will prepare the test cases.
